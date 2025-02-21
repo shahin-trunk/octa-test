@@ -20,8 +20,8 @@ RUN apt-get -y update &&\
 
 
 # Verify installations
-RUN python --version && \
-  rustc --version && \
-  protoc --version
+#RUN python --version && \
+#  rustc --version && \
+#  protoc --version
 
 RUN pip install tantivy lancedb
