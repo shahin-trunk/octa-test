@@ -61,6 +61,7 @@ services:
 
   # LanceDB
   lancedb:
+    build: ./lancedb
     image: lancedb/lancedb
     volumes:
       - ./lancedb_data:/data
