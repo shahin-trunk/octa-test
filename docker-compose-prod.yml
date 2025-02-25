@@ -9,10 +9,9 @@ services:
       - "--entrypoints.websecure.address=:443"
       - "--entrypoints.postgre.address=:5432"
       - "--entrypoints.mongo.address=:27017"
-      - "--certificatesresolvers.myresolver.acme.httpchallenge=true"
-      - "--certificatesresolvers.myresolver.acme.httpchallenge.entrypoint=web"
-      - "--certificatesresolvers.myresolver.acme.email=${TRAEFIK_EMAIL}"
-      - "--certificatesresolvers.myresolver.acme.storage=/letsencrypt/acme.json"
+      - "--certificatesresolvers.octarine.acme.httpchallenge.entrypoint=web"
+      - "--certificatesresolvers.octarine.acme.email=${TRAEFIK_EMAIL}"
+      - "--certificatesresolvers.octarine.acme.storage=/letsencrypt/acme.json"
     ports:
       - "80:80"
       - "443:443"
@@ -33,7 +32,7 @@ services:
       - "traefik.http.routers.traefik.rule=Host(`${TRAEFIK_HOST}`)"
       - "traefik.http.routers.traefik.service=api@internal"
       - "traefik.http.routers.traefik.entrypoints=websecure"
-      - "traefik.http.routers.traefik.tls.certresolver=myresolver"
+      - "traefik.http.routers.traefik.tls.certresolver=octarine"
       - "traefik.http.routers.traefik.middlewares=auth"
       - "traefik.http.middlewares.auth.basicauth.users=${TRAEFIK_BASICAUTH_USERS}"
 
@@ -49,7 +48,7 @@ services:
     labels:
       - "traefik.tcp.routers.postgresql.entrypoints=postgre"
       - "traefik.tcp.routers.postgresql.service=postgresql"
-      - "traefik.tcp.routers.postgresql.tls.certresolver=myresolver"
+      - "traefik.tcp.routers.postgresql.tls.certresolver=octarine"
       - "traefik.tcp.routers.postgresql.tls.passthrough=false"
     healthcheck:
       test: [ "CMD", "pg_isready", "-U", "postgres" ]
@@ -74,14 +73,13 @@ services:
     labels:
       - "traefik.tcp.routers.mongo.entrypoints=mongo"
       - "traefik.tcp.routers.mongo.service=mongo"
-      - "traefik.tcp.routers.mongo.tls.certresolver=myresolver"
+      - "traefik.tcp.routers.mongo.tls.certresolver=octarine"
       - "traefik.tcp.routers.mongo.tls.passthrough=false"
     restart: unless-stopped
     logging:
       driver: "json-file"
       options:
         max-size: "10m"
-
 
   lancedb:
     build: ./lancedb
@@ -95,7 +93,7 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.lancedb.rule=Host(`${LANCEDB_HOST}`)"
       - "traefik.http.routers.lancedb.entrypoints=websecure"
-      - "traefik.http.routers.lancedb.tls.certresolver=myresolver"
+      - "traefik.http.routers.lancedb.tls.certresolver=octarine"
       - "traefik.http.services.lancedb.loadbalancer.server.port=8080"
     restart: unless-stopped
     logging:
@@ -114,7 +112,7 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.qdrant.rule=Host(`${QDRANT_HOST}`)"
       - "traefik.http.routers.qdrant.entrypoints=websecure"
-      - "traefik.http.routers.qdrant.tls.certresolver=myresolver"
+      - "traefik.http.routers.qdrant.tls.certresolver=octarine"
       - "traefik.http.services.qdrant.loadbalancer.server.port=6333"
     restart: unless-stopped
     logging:
@@ -157,7 +155,7 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.searxng.rule=Host(`${SEARXNG_HOST}`)"
       - "traefik.http.routers.searxng.entrypoints=websecure"
-      - "traefik.http.routers.searxng.tls.certresolver=myresolver"
+      - "traefik.http.routers.searxng.tls.certresolver=octarine"
       - "traefik.http.services.searxng.loadbalancer.server.port=8080"
     cap_drop:
       - ALL
