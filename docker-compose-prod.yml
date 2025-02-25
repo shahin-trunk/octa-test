@@ -165,11 +165,11 @@ services:
       driver: "json-file"
       options:
         max-size: "10m"
-    # healthcheck:
-    #   test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
-    #   interval: 10s
-    #   timeout: 5s
-    #   retries: 5
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   qdrant:
     image: qdrant/qdrant
@@ -189,83 +189,51 @@ services:
       driver: "json-file"
       options:
         max-size: "10m"
-    # healthcheck:
-    #   test: ["CMD", "curl", "-f", "http://localhost:6333/health"]
-    #   interval: 10s
-    #   timeout: 5s
-    #   retries: 5
-
-  nebula-meta:
-    image: vesoft/nebula-metad
-    volumes:
-      - ./nebula-meta-data:/var/nebula/meta
-    networks:
-      - internal
-    restart: unless-stopped
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-
-  nebula-graph:
-    image: vesoft/nebula-graphd
-    volumes:
-      - ./nebula-graph-data:/var/nebula/graph
-    networks:
-      - internal
-    depends_on:
-      - nebula-meta
-    restart: unless-stopped
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-
-  nebula-storage:
-    image: vesoft/nebula-storaged
-    volumes:
-      - ./nebula-storage-data:/var/nebula/storage
-    networks:
-      - internal
-    depends_on:
-      - nebula-meta
-    restart: unless-stopped
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-
-  nebula-explorer:
-    image: vesoft/nebula-explorer
-    environment:
-      - NEBULA_GRAPH_HOST=nebula-graph
-      - NEBULA_GRAPH_PORT=9669
-      - NEBULA_META_HOST=nebula-meta
-      - NEBULA_META_PORT=9559
-      - NEBULA_STORAGE_HOST=nebula-storage
-      - NEBULA_STORAGE_PORT=9779
-    networks:
-      - web
-      - internal
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.nebula-explorer.rule=Host(`nebula.nx2ai.com`)"
-      - "traefik.http.routers.nebula-explorer.entrypoints=websecure"
-      - "traefik.http.routers.nebula-explorer.tls.certresolver=letsencrypt"
-    depends_on:
-      - nebula-meta
-      - nebula-graph
-      - nebula-storage
-    restart: unless-stopped
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
     healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost:80" ]
+      test: ["CMD", "curl", "-f", "http://localhost:6333/health"]
       interval: 10s
       timeout: 5s
       retries: 5
+
+#  nebula-meta:
+#    image: vesoft/nebula-metad
+#    volumes:
+#      - ./nebula-meta-data:/var/nebula/meta
+#    networks:
+#      - internal
+#    restart: unless-stopped
+#    logging:
+#      driver: "json-file"
+#      options:
+#        max-size: "10m"
+#
+#  nebula-graph:
+#    image: vesoft/nebula-graphd
+#    volumes:
+#      - ./nebula-graph-data:/var/nebula/graph
+#    networks:
+#      - internal
+#    depends_on:
+#      - nebula-meta
+#    restart: unless-stopped
+#    logging:
+#      driver: "json-file"
+#      options:
+#        max-size: "10m"
+#
+#  nebula-storage:
+#    image: vesoft/nebula-storaged
+#    volumes:
+#      - ./nebula-storage-data:/var/nebula/storage
+#    networks:
+#      - internal
+#    depends_on:
+#      - nebula-meta
+#    restart: unless-stopped
+#    logging:
+#      driver: "json-file"
+#      options:
+#        max-size: "10m"
 
   redis:
     image: docker.io/valkey/valkey:8-alpine
