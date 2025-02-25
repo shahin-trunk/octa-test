@@ -162,7 +162,7 @@ services:
       - SETGID
       - SETUID
     depends_on:
-      redis
+      - redis
     logging:
       driver: "json-file"
       options:
