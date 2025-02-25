@@ -136,11 +136,6 @@ services:
       driver: "json-file"
       options:
         max-size: "10m"
-    healthcheck:
-      test: [ "CMD-SHELL", "valkey-cli ping | grep PONG" ]
-      interval: 10s
-      timeout: 5s
-      retries: 5
 
   searxng:
     image: docker.io/searxng/searxng:latest
@@ -167,17 +162,11 @@ services:
       - SETGID
       - SETUID
     depends_on:
-      redis:
-        condition: service_healthy
+      redis
     logging:
       driver: "json-file"
       options:
         max-size: "10m"
-    healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost:8080" ]
-      interval: 10s
-      timeout: 5s
-      retries: 5
 
 networks:
   web:
