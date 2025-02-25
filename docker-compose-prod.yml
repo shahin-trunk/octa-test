@@ -33,7 +33,7 @@ services:
       - "traefik.http.routers.traefik.rule=Host(`${TRAEFIK_HOST}`)"
       - "traefik.http.routers.traefik.service=api@internal"
       - "traefik.http.routers.traefik.entrypoints=websecure"
-      - "traefik.http.routers.traefik.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.traefik.tls.certresolver=myresolver"
       - "traefik.http.routers.traefik.middlewares=auth"
       - "traefik.http.middlewares.auth.basicauth.users=${TRAEFIK_BASICAUTH_USERS}"
 
@@ -49,7 +49,7 @@ services:
     labels:
       - "traefik.tcp.routers.postgresql.entrypoints=postgre"
       - "traefik.tcp.routers.postgresql.service=postgresql"
-      - "traefik.tcp.routers.postgresql.tls.certresolver=letsencrypt"
+      - "traefik.tcp.routers.postgresql.tls.certresolver=myresolver"
       - "traefik.tcp.routers.postgresql.tls.passthrough=false"
     healthcheck:
       test: [ "CMD", "pg_isready", "-U", "postgres" ]
@@ -74,7 +74,7 @@ services:
     labels:
       - "traefik.tcp.routers.mongo.entrypoints=mongo"
       - "traefik.tcp.routers.mongo.service=mongo"
-      - "traefik.tcp.routers.mongo.tls.certresolver=letsencrypt"
+      - "traefik.tcp.routers.mongo.tls.certresolver=myresolver"
       - "traefik.tcp.routers.mongo.tls.passthrough=false"
     restart: unless-stopped
     logging:
@@ -95,7 +95,7 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.lancedb.rule=Host(`${LANCEDB_HOST}`)"
       - "traefik.http.routers.lancedb.entrypoints=websecure"
-      - "traefik.http.routers.lancedb.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.lancedb.tls.certresolver=myresolver"
       - "traefik.http.services.lancedb.loadbalancer.server.port=8080"
     restart: unless-stopped
     logging:
@@ -114,7 +114,7 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.qdrant.rule=Host(`${QDRANT_HOST}`)"
       - "traefik.http.routers.qdrant.entrypoints=websecure"
-      - "traefik.http.routers.qdrant.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.qdrant.tls.certresolver=myresolver"
       - "traefik.http.services.qdrant.loadbalancer.server.port=6333"
     restart: unless-stopped
     logging:
@@ -157,7 +157,7 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.searxng.rule=Host(`${SEARXNG_HOST}`)"
       - "traefik.http.routers.searxng.entrypoints=websecure"
-      - "traefik.http.routers.searxng.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.searxng.tls.certresolver=myresolver"
       - "traefik.http.services.searxng.loadbalancer.server.port=8080"
     cap_drop:
       - ALL
