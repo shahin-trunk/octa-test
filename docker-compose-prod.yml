@@ -135,6 +135,7 @@ services:
       retries: 5
 
   lancedb:
+    build: ./lancedb
     image: lancedb/lancedb
     volumes:
       - ./lancedb_data:/data  # Adjust based on documentation
