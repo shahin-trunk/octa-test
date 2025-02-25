@@ -61,7 +61,7 @@ services:
         max-size: "10m"
 
   mongo:
-    image: mongo:6.0
+    image: mongo:latest
     environment:
       MONGO_INITDB_ROOT_USERNAME: root
       MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD}
@@ -79,6 +79,8 @@ services:
       driver: "json-file"
       options:
         max-size: "10m"
+    ports:
+      27017: 27017
 
   lancedb:
     build: ./lancedb
