@@ -45,7 +45,7 @@ services:
     volumes:
       - ./postgresql_data:/var/lib/postgresql/data
     networks:
-      - internal
+      - web
     labels:
       - "traefik.tcp.routers.postgresql.entrypoints=postgre"
       - "traefik.tcp.routers.postgresql.service=postgresql"
@@ -71,7 +71,7 @@ services:
     volumes:
       - ./mongo_data:/data/db
     networks:
-      - internal
+      - web
     labels:
       - "traefik.tcp.routers.mongo.entrypoints=mongo"
       - "traefik.tcp.routers.mongo.service=mongo"
@@ -84,33 +84,13 @@ services:
       options:
         max-size: "10m"
 
-  lancedb:
-    build: ./lancedb
-    image: lancedb/lancedb
-    volumes:
-      - ./lancedb_data:/data  # Adjust based on documentation
-    networks:
-      - web
-      - internal
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.lancedb.rule=Host(`${LANCEDB_HOST}`)"
-      - "traefik.http.routers.lancedb.entrypoints=websecure"
-      - "traefik.http.routers.lancedb.tls.certresolver=octarine"
-      - "traefik.http.services.lancedb.loadbalancer.server.port=8080"
-    restart: unless-stopped
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-
   qdrant:
     image: qdrant/qdrant
     volumes:
       - ./qdrant_data:/qdrant/data  # Adjust based on documentation
     networks:
       - web
-      - internal
+#      - internal
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.qdrant.rule=Host(`${QDRANT_HOST}`)"
@@ -147,7 +127,7 @@ services:
     restart: unless-stopped
     networks:
       - web
-      - internal
+#      - internal
     volumes:
       - ./searxng_config:/etc/searxng:rw
     environment:
