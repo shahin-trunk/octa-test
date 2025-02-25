@@ -222,34 +222,34 @@ services:
       options:
         max-size: "10m"
 
-  nebula-web:
-    image: vesoft/nebula-web
-    environment:
-      - NEBULA_GRAPH_ADDR=nebula-graph:9669
-      - NEBULA_META_ADDR=nebula-meta:9559
-      - NEBULA_STORAGE_ADDR=nebula-storage:9779
-    networks:
-      - web
-      - internal
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.nebula-web.rule=Host(`${NEBULA_WEB_HOST}`)"
-      - "traefik.http.routers.nebula-web.entrypoints=websecure"
-      - "traefik.http.routers.nebula-web.tls.certresolver=letsencrypt"
-    depends_on:
-      - nebula-meta
-      - nebula-graph
-      - nebula-storage
-    restart: unless-stopped
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-    healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost:80" ]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+#  nebula-web:
+#    image: vesoft/nebula-web
+#    environment:
+#      - NEBULA_GRAPH_ADDR=nebula-graph:9669
+#      - NEBULA_META_ADDR=nebula-meta:9559
+#      - NEBULA_STORAGE_ADDR=nebula-storage:9779
+#    networks:
+#      - web
+#      - internal
+#    labels:
+#      - "traefik.enable=true"
+#      - "traefik.http.routers.nebula-web.rule=Host(`${NEBULA_WEB_HOST}`)"
+#      - "traefik.http.routers.nebula-web.entrypoints=websecure"
+#      - "traefik.http.routers.nebula-web.tls.certresolver=letsencrypt"
+#    depends_on:
+#      - nebula-meta
+#      - nebula-graph
+#      - nebula-storage
+#    restart: unless-stopped
+#    logging:
+#      driver: "json-file"
+#      options:
+#        max-size: "10m"
+#    healthcheck:
+#      test: [ "CMD", "curl", "-f", "http://localhost:80" ]
+#      interval: 10s
+#      timeout: 5s
+#      retries: 5
 
   redis:
     image: docker.io/valkey/valkey:8-alpine
