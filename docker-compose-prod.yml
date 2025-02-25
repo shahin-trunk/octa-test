@@ -35,11 +35,6 @@ services:
       - "traefik.http.routers.traefik.tls.certresolver=letsencrypt"
       - "traefik.http.routers.traefik.middlewares=auth"
       - "traefik.http.middlewares.auth.basicauth.users=${TRAEFIK_BASICAUTH_USERS}"
-    healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost:8080/ping" ]
-      interval: 10s
-      timeout: 5s
-      retries: 5
 
   postgresql:
     image: postgres:16
@@ -66,35 +61,6 @@ services:
       options:
         max-size: "10m"
 
-  pgadmin:
-    image: dpage/pgadmin4
-    environment:
-      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL}
-      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD}
-    volumes:
-      - ./pgadmin_data:/var/lib/pgadmin
-    networks:
-      - web
-      - internal
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.pgadmin.rule=Host(`${PGADMIN_HOST}`)"
-      - "traefik.http.routers.pgadmin.entrypoints=websecure"
-      - "traefik.http.routers.pgadmin.tls.certresolver=letsencrypt"
-    depends_on:
-      postgresql:
-        condition: service_healthy
-    restart: unless-stopped
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-    healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost:80" ]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
   mongo:
     image: mongo:6.0
     environment:
@@ -109,42 +75,11 @@ services:
       - "traefik.tcp.routers.mongo.service=mongo"
       - "traefik.tcp.routers.mongo.tls.certresolver=letsencrypt"
       - "traefik.tcp.routers.mongo.tls.passthrough=false"
-    healthcheck:
-      test: [ "CMD", "mongo", "--eval", "db.runCommand({ping:1})" ]
-      interval: 10s
-      timeout: 5s
-      retries: 5
     restart: unless-stopped
     logging:
       driver: "json-file"
       options:
         max-size: "10m"
-
-  mongo-express:
-    image: mongo-express
-    environment:
-      ME_CONFIG_MONGODB_URL: "mongo://root:${MONGO_ROOT_PASSWORD}@mongo:27017/"
-    networks:
-      - web
-      - internal
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.mongo-express.rule=Host(`${MONGO_EXPRESS_HOST}`)"
-      - "traefik.http.routers.mongo-express.entrypoints=websecure"
-      - "traefik.http.routers.mongo-express.tls.certresolver=letsencrypt"
-    depends_on:
-      mongo:
-        condition: service_healthy
-    restart: unless-stopped
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-    healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost:8081" ]
-      interval: 10s
-      timeout: 5s
-      retries: 5
 
   lancedb:
     build: ./lancedb
@@ -165,11 +100,6 @@ services:
       driver: "json-file"
       options:
         max-size: "10m"
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
 
   qdrant:
     image: qdrant/qdrant
@@ -189,51 +119,6 @@ services:
       driver: "json-file"
       options:
         max-size: "10m"
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:6333/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-#  nebula-meta:
-#    image: vesoft/nebula-metad
-#    volumes:
-#      - ./nebula-meta-data:/var/nebula/meta
-#    networks:
-#      - internal
-#    restart: unless-stopped
-#    logging:
-#      driver: "json-file"
-#      options:
-#        max-size: "10m"
-#
-#  nebula-graph:
-#    image: vesoft/nebula-graphd
-#    volumes:
-#      - ./nebula-graph-data:/var/nebula/graph
-#    networks:
-#      - internal
-#    depends_on:
-#      - nebula-meta
-#    restart: unless-stopped
-#    logging:
-#      driver: "json-file"
-#      options:
-#        max-size: "10m"
-#
-#  nebula-storage:
-#    image: vesoft/nebula-storaged
-#    volumes:
-#      - ./nebula-storage-data:/var/nebula/storage
-#    networks:
-#      - internal
-#    depends_on:
-#      - nebula-meta
-#    restart: unless-stopped
-#    logging:
-#      driver: "json-file"
-#      options:
-#        max-size: "10m"
 
   redis:
     image: docker.io/valkey/valkey:8-alpine
@@ -277,8 +162,8 @@ services:
       - "traefik.http.routers.searxng.entrypoints=websecure"
       - "traefik.http.routers.searxng.tls.certresolver=letsencrypt"
       - "traefik.http.services.searxng.loadbalancer.server.port=8080"
-    # cap_drop:
-    #   - ALL
+    cap_drop:
+      - ALL
     cap_add:
       - CHOWN
       - SETGID
