@@ -9,6 +9,8 @@ services:
       - "--providers.docker=true"
       - "--entrypoints.web.address=:80"
       - "--entrypoints.websecure.address=:443"
+      - "--entrypoints.postgre.address=:5432"
+      - "--entrypoints.mongo.address=:27017"
       - "--certificatesresolvers.letsencrypt.acme.email=${TRAEFIK_EMAIL}"
       - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
       - "--certificatesresolvers.letsencrypt.acme.httpchallenge=true"
@@ -48,6 +50,11 @@ services:
       - ./postgresql_data:/var/lib/postgresql/data
     networks:
       - internal
+    labels:
+      - "traefik.tcp.routers.postgresql.entrypoints=postgre"
+      - "traefik.tcp.routers.postgresql.service=postgresql"
+      - "traefik.tcp.routers.postgresql.tls.certresolver=letsencrypt"
+      - "traefik.tcp.routers.postgresql.tls.passthrough=false"
     healthcheck:
       test: [ "CMD", "pg_isready", "-U", "postgres" ]
       interval: 10s
@@ -97,6 +104,11 @@ services:
       - ./mongo_data:/data/db
     networks:
       - internal
+    labels:
+      - "traefik.tcp.routers.mongo.entrypoints=mongo"
+      - "traefik.tcp.routers.mongo.service=mongo"
+      - "traefik.tcp.routers.mongo.tls.certresolver=letsencrypt"
+      - "traefik.tcp.routers.mongo.tls.passthrough=false"
     healthcheck:
       test: [ "CMD", "mongo", "--eval", "db.runCommand({ping:1})" ]
       interval: 10s
@@ -223,34 +235,37 @@ services:
       options:
         max-size: "10m"
 
-#  nebula-web:
-#    image: vesoft/nebula-web
-#    environment:
-#      - NEBULA_GRAPH_ADDR=nebula-graph:9669
-#      - NEBULA_META_ADDR=nebula-meta:9559
-#      - NEBULA_STORAGE_ADDR=nebula-storage:9779
-#    networks:
-#      - web
-#      - internal
-#    labels:
-#      - "traefik.enable=true"
-#      - "traefik.http.routers.nebula-web.rule=Host(`${NEBULA_WEB_HOST}`)"
-#      - "traefik.http.routers.nebula-web.entrypoints=websecure"
-#      - "traefik.http.routers.nebula-web.tls.certresolver=letsencrypt"
-#    depends_on:
-#      - nebula-meta
-#      - nebula-graph
-#      - nebula-storage
-#    restart: unless-stopped
-#    logging:
-#      driver: "json-file"
-#      options:
-#        max-size: "10m"
-#    healthcheck:
-#      test: [ "CMD", "curl", "-f", "http://localhost:80" ]
-#      interval: 10s
-#      timeout: 5s
-#      retries: 5
+  nebula-explorer:
+    image: vesoft/nebula-explorer
+    environment:
+      - NEBULA_GRAPH_HOST=nebula-graph
+      - NEBULA_GRAPH_PORT=9669
+      - NEBULA_META_HOST=nebula-meta
+      - NEBULA_META_PORT=9559
+      - NEBULA_STORAGE_HOST=nebula-storage
+      - NEBULA_STORAGE_PORT=9779
+    networks:
+      - web
+      - internal
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.nebula-explorer.rule=Host(`nebula.nx2ai.com`)"
+      - "traefik.http.routers.nebula-explorer.entrypoints=websecure"
+      - "traefik.http.routers.nebula-explorer.tls.certresolver=letsencrypt"
+    depends_on:
+      - nebula-meta
+      - nebula-graph
+      - nebula-storage
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:80" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   redis:
     image: docker.io/valkey/valkey:8-alpine
