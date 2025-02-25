@@ -77,7 +77,7 @@ services:
       - "traefik.tcp.routers.mongo.service=mongo"
       - "traefik.tcp.routers.mongo.tls.certresolver=octarine"
       - "traefik.tcp.routers.mongo.tls.passthrough=false"
-      - "traefik.tcp.services.lancedb.loadbalancer.server.port=27017"
+      - "traefik.tcp.services.mongo.loadbalancer.server.port=27017"
     restart: unless-stopped
     logging:
       driver: "json-file"
