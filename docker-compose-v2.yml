@@ -1,0 +1,212 @@
+# Docker Compose file version: '3.8' supports resource limits and modern features.
+# Documentation: https://docs.docker.com/compose/compose-file/compose-versioning/
+version: '3.8'
+
+# Services define the containers to run.
+services:
+  # Traefik: Reverse proxy and load balancer for routing traffic.
+  # Documentation: https://doc.traefik.io/traefik/
+  traefik:
+    # Use a specific version tag instead of 'latest' to ensure stability in production.
+    image: traefik:v3.3.4
+    # Command-line arguments for Traefik configuration.
+    command:
+      - "--api=true"                          # Enable Traefik API for monitoring.
+      - "--api.dashboard=true"                # Enable Traefik dashboard.
+      - "--providers.docker=true"             # Enable Docker provider to manage services.
+      - "--entrypoints.web.address=:80"       # Define HTTP entrypoint on port 80.
+      - "--entrypoints.websecure.address=:443" # Define HTTPS entrypoint on port 443.
+      - "--certificatesresolvers.octarine.acme.httpchallenge.entrypoint=web" # Use HTTP-01 challenge for Let's Encrypt.
+      - "--certificatesresolvers.octarine.acme.email=${TRAEFIK_EMAIL}"       # Email for Let's Encrypt registration.
+      - "--certificatesresolvers.octarine.acme.storage=/letsencrypt/acme.json" # Store certificates.
+    # Ports exposed to the host machine.
+    ports:
+      - "80:80"    # Map host port 80 to container port 80 (HTTP).
+      - "443:443"  # Map host port 443 to container port 443 (HTTPS).
+    # Volumes for persistent data and Docker socket access.
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro  # Read-only access to Docker socket for service discovery.
+      - ./letsencrypt:/letsencrypt                   # Persist Let's Encrypt certificates.
+    # Network configuration: connects to the public-facing 'web' network.
+    networks:
+      - web
+    # Restart policy ensures the container restarts unless explicitly stopped.
+    restart: unless-stopped
+    # Logging configuration to manage log size.
+    logging:
+      driver: "json-file"  # Use JSON format for logs.
+      options:
+        max-size: "10m"    # Limit log file size to 10MB.
+    # Labels for Traefik to configure routing and middleware.
+    labels:
+      - "traefik.enable=true"                          # Enable Traefik for this service.
+      - "traefik.http.routers.traefik.rule=Host(`${TRAEFIK_HOST}`)" # Route requests to the dashboard.
+      - "traefik.http.routers.traefik.service=api@internal"         # Use internal API service.
+      - "traefik.http.routers.traefik.entrypoints=websecure"        # Use HTTPS entrypoint.
+      - "traefik.http.routers.traefik.tls.certresolver=octarine"    # Enable TLS with Let's Encrypt.
+      - "traefik.http.routers.traefik.middlewares=auth"             # Apply basic auth middleware.
+      - "traefik.http.middlewares.auth.basicauth.users=${TRAEFIK_BASICAUTH_USERS}" # Define authorized users.
+    # Resource limits for production to prevent overuse.
+    deploy:
+      resources:
+        limits:
+          memory: 256M  # Limit memory usage to 256MB.
+          cpus: "1"     # Limit to 1 CPU core.
+
+  # PostgreSQL: Relational database service.
+  # Documentation: https://hub.docker.com/_/postgres
+  postgresql:
+    image: postgres:17.4  # Use a specific version for consistency.
+    # Environment variables for database configuration.
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}      # Database username.
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD} # Database password.
+      POSTGRES_DB: ${POSTGRES_DB}          # Default database name.
+    # Volume to persist database data.
+    volumes:
+      - ./postgresql_data:/var/lib/postgresql/data
+    # Connect to 'internal' network to restrict external access.
+    networks:
+      - internal
+    # Healthcheck to ensure the database is running.
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"] # Check if PostgreSQL is ready.
+      interval: 10s  # Check every 10 seconds.
+      timeout: 5s    # Timeout after 5 seconds.
+      retries: 5     # Retry 5 times before marking unhealthy.
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+    deploy:
+      resources:
+        limits:
+          memory: 1G  # Limit memory to 1GB.
+          cpus: "2"   # Limit to 2 CPU cores.
+
+  # MongoDB: NoSQL database service.
+  # Documentation: https://hub.docker.com/_/mongo
+  mongo:
+    image: mongo:7.0.17  # Specific version for reliability.
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USERNAME} # Root username.
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD} # Root password.
+    volumes:
+      - ./mongo_data:/data/db  # Persist MongoDB data.
+    networks:
+      - internal  # Restrict to internal network.
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: "2"
+
+  # Qdrant: Vector search engine.
+  # Documentation: https://qdrant.tech/documentation/
+  qdrant:
+    image: qdrant/qdrant:v1.13.4  # Specific version tag.
+    volumes:
+      - ./qdrant_data:/qdrant/data  # Persist vector data.
+    networks:
+      - web  # Public-facing for API access.
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.qdrant.rule=Host(`${QDRANT_HOST}`)" # Route requests to Qdrant.
+      - "traefik.http.routers.qdrant.entrypoints=websecure"       # Use HTTPS.
+      - "traefik.http.routers.qdrant.tls.certresolver=octarine"   # Enable TLS.
+      - "traefik.http.services.qdrant.loadbalancer.server.port=6333" # Qdrant default port.
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: "1"
+
+  # Redis (Valkey): In-memory data store.
+  # Documentation: https://valkey.io/docs/
+  redis:
+    image: docker.io/valkey/valkey:8.1  # Use Valkey (Redis fork) with a specific version.
+    # Custom command to configure persistence and logging.
+    command: valkey-server --save 30 1 --loglevel warning
+    restart: unless-stopped
+    networks:
+      - internal  # Internal access only.
+    volumes:
+      - ./valkey_data:/data  # Persist data.
+    # Security: Drop all capabilities except those needed.
+    cap_drop:
+      - ALL
+    cap_add:
+      - SETGID
+      - SETUID
+      - DAC_OVERRIDE
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: "1"
+
+  # Searxng: Privacy-respecting metasearch engine.
+  # Documentation: https://docs.searxng.org/
+  searxng:
+    image: docker.io/searxng/searxng:2025.2.26-1fd4dab3b  # Specific version.
+    restart: unless-stopped
+    networks:
+      - web      # For public access.
+      - internal # For Redis access.
+    volumes:
+      - ./searxng_config:/etc/searxng:rw  # Configuration volume (read-write).
+    environment:
+      - SEARXNG_BASE_URL=https://${SEARXNG_HOST:-localhost}/ # Base URL for Searxng.
+      - UWSGI_WORKERS=${SEARXNG_UWSGI_WORKERS:-4}           # Number of uWSGI workers.
+      - UWSGI_THREADS=${SEARXNG_UWSGI_THREADS:-4}           # Number of uWSGI threads.
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.searxng.rule=Host(`${SEARXNG_HOST}`)" # Routing rule.
+      - "traefik.http.routers.searxng.entrypoints=websecure"        # Use HTTPS.
+      - "traefik.http.routers.searxng.tls.certresolver=octarine"    # Enable TLS.
+      - "traefik.http.services.searxng.loadbalancer.server.port=8080" # Searxng port.
+    # Security: Limit capabilities.
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - SETGID
+      - SETUID
+    # Dependency on Redis service.
+    depends_on:
+      - redis
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: "1"
+
+# Network definitions for service isolation.
+# Documentation: https://docs.docker.com/compose/networking/
+networks:
+  # Public-facing network for Traefik and web services.
+  web:
+    driver: bridge
+  # Internal network for backend services, inaccessible externally.
+  internal:
+    driver: bridge
+    internal: true  # Prevents external access for security.
