@@ -1,22 +1,20 @@
+version: '3'
+
 services:
   traefik:
     image: traefik:v3.3
     command:
       - "--api=true"
       - "--api.dashboard=true"
-      - "--providers.docker=true"
+      - "--providers.docker"
       - "--entrypoints.web.address=:80"
       - "--entrypoints.websecure.address=:443"
-      - "--entrypoints.postgre.address=:5432"
-      - "--entrypoints.mongo.address=:27017"
       - "--certificatesresolvers.octarine.acme.httpchallenge.entrypoint=web"
       - "--certificatesresolvers.octarine.acme.email=${TRAEFIK_EMAIL}"
       - "--certificatesresolvers.octarine.acme.storage=/letsencrypt/acme.json"
     ports:
       - "80:80"
       - "443:443"
-      - "27017:27017"
-      - "5432:5432"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./letsencrypt:/letsencrypt
@@ -35,6 +33,10 @@ services:
       - "traefik.http.routers.traefik.tls.certresolver=octarine"
       - "traefik.http.routers.traefik.middlewares=auth"
       - "traefik.http.middlewares.auth.basicauth.users=${TRAEFIK_BASICAUTH_USERS}"
+    resources:
+      limits:
+        memory: 256M
+        cpu: "1"
 
   postgresql:
     image: postgres:17.4
@@ -45,13 +47,7 @@ services:
     volumes:
       - ./postgresql_data:/var/lib/postgresql/data
     networks:
-      - web
-    labels:
-      - "traefik.tcp.routers.postgresql.entrypoints=postgre"
-      - "traefik.tcp.routers.postgresql.service=postgresql"
-      - "traefik.tcp.routers.postgresql.tls.certresolver=octarine"
-      - "traefik.tcp.routers.postgresql.tls.passthrough=false"
-      - "traefik.tcp.services.postgresql.loadbalancer.server.port=5432"
+      - internal
     healthcheck:
       test: [ "CMD", "pg_isready", "-U", "postgres" ]
       interval: 10s
@@ -62,6 +58,10 @@ services:
       driver: "json-file"
       options:
         max-size: "10m"
+    resources:
+      limits:
+        memory: 1G
+        cpu: "2"
 
   mongo:
     image: mongo:7.0.17
@@ -71,26 +71,23 @@ services:
     volumes:
       - ./mongo_data:/data/db
     networks:
-      - web
-    labels:
-      - "traefik.tcp.routers.mongo.entrypoints=mongo"
-      - "traefik.tcp.routers.mongo.service=mongo"
-      - "traefik.tcp.routers.mongo.tls.certresolver=octarine"
-      - "traefik.tcp.routers.mongo.tls.passthrough=false"
-      - "traefik.tcp.services.mongo.loadbalancer.server.port=27017"
+      - internal
     restart: unless-stopped
     logging:
       driver: "json-file"
       options:
         max-size: "10m"
+    resources:
+      limits:
+        memory: 1G
+        cpu: "2"
 
   qdrant:
     image: qdrant/qdrant
     volumes:
-      - ./qdrant_data:/qdrant/data  # Adjust based on documentation
+      - ./qdrant_data:/qdrant/data
     networks:
       - web
-#      - internal
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.qdrant.rule=Host(`${QDRANT_HOST}`)"
@@ -102,6 +99,10 @@ services:
       driver: "json-file"
       options:
         max-size: "10m"
+    resources:
+      limits:
+        memory: 512M
+        cpu: "1"
 
   redis:
     image: docker.io/valkey/valkey:8-alpine
@@ -121,13 +122,17 @@ services:
       driver: "json-file"
       options:
         max-size: "10m"
+    resources:
+      limits:
+        memory: 512M
+        cpu: "1"
 
   searxng:
     image: docker.io/searxng/searxng:latest
     restart: unless-stopped
     networks:
       - web
-#      - internal
+      - internal
     volumes:
       - ./searxng_config:/etc/searxng:rw
     environment:
@@ -152,6 +157,10 @@ services:
       driver: "json-file"
       options:
         max-size: "10m"
+    resources:
+      limits:
+        memory: 512M
+        cpu: "1"
 
 networks:
   web:
